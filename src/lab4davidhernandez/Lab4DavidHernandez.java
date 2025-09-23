@@ -20,7 +20,7 @@ import javafx.stage.Stage;
 
 /**
  *
- * @author 6309110
+ * @author David Hernandez
  */
 public class Lab4DavidHernandez extends Application {
     private static final double MILEAGE_ALLOWANCE = 0.27;
@@ -35,8 +35,8 @@ public class Lab4DavidHernandez extends Application {
 
     @Override
     public void start(Stage stage) {
-        Label title = new Label("Welcome to business expense calculator");
-        title.setId("title");
+        // initialize labels
+        Label title = new Label(" Welcome to Business Expense Calculator!! ");
         Label days = new Label("Number of days on the trip:");
         Label airfare = new Label("Amount of airfare, if any:");
         Label carRental = new Label("Car rental fees:");
@@ -45,8 +45,17 @@ public class Lab4DavidHernandez extends Application {
         Label taxi = new Label("Taxi charges:");
         Label conference = new Label("Conference/Seminar registration fees:");
         Label lodging = new Label("Lodging charges, per night:");
-        Label total = new Label();
-        
+        Label expensesLabel = new Label("Total Expenses");
+        Label allowableLabel = new Label("Total Allowable Expenses");
+        Label excessLabel = new Label("Total Excess");
+
+        // set styling (see styling.css)
+        title.setId("title");
+        expensesLabel.getStyleClass().add("result-button");
+        allowableLabel.getStyleClass().add("result-button");
+        excessLabel.getStyleClass().add("result-button");
+
+        // initialize textFields
         TextField daysField = new TextField();
         TextField airfareField = new TextField();
         TextField carRentalField = new TextField();
@@ -55,14 +64,18 @@ public class Lab4DavidHernandez extends Application {
         TextField taxiField = new TextField();
         TextField conferenceField = new TextField();
         TextField lodgingField = new TextField();
-        
+
+        // initialize calculate button and set its default state to disabled
         Button calculate = new Button("Calculate");
         calculate.setDisable(true);
-        
+
+        // initialize gridPane and set up basic settings
         GridPane gp = new GridPane();
         gp.setHgap(15);
         gp.setVgap(15);
         gp.setPadding(new Insets(20, 40, 20, 40));
+
+        // add nodes into gridPane
         gp.add(title, 0, 0, 2, 1);
         gp.add(days, 0, 1);
         gp.add(daysField, 1, 1);
@@ -81,9 +94,13 @@ public class Lab4DavidHernandez extends Application {
         gp.add(lodging, 0, 8);
         gp.add(lodgingField, 1, 8);
         gp.add(calculate, 0, 9);
-        gp.add(total, 0, 10);
-        
-        EventHandler disableCalculateHandler = new EventHandler<KeyEvent>() {
+        gp.add(expensesLabel, 0, 10);
+        gp.add(allowableLabel, 1, 10);
+        gp.add(excessLabel, 0, 11);
+
+        // handle when it is permissible to click the calculate button
+        // based on what is contained in textFields
+        EventHandler<KeyEvent> disableCalculateHandler = new EventHandler<KeyEvent>() {
             @Override
             public void handle(KeyEvent t) {
                 calculate.setDisable(
@@ -97,11 +114,31 @@ public class Lab4DavidHernandez extends Application {
                         !lodgingField.getText().matches("^\\d+[.]?\\d?\\d?$"));
             }
         };
-        
-        EventHandler clickedCalculateHandler;
-        clickedCalculateHandler = new EventHandler<MouseEvent>() {
+
+        // handle when to disable certain textFields
+        // carRentalField and milesDrivenField can't both contain data
+        EventHandler<KeyEvent> disableTextField = new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent keyEvent) {
+                if (!carRentalField.getText().isEmpty()) {
+                    milesField.setDisable(true);
+                } else {
+                    milesField.setDisable(false);
+                }
+                if (!milesField.getText().isEmpty()) {
+                    carRentalField.setDisable(true);
+                } else {
+                    carRentalField.setDisable(false);
+                }
+            }
+        };
+
+        // handle when the calculate button is clicked
+        // calculate expenses, allowable expenses, and amount saved (or excess to be paid)
+        EventHandler<MouseEvent> clickedCalculateHandler = new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent t) {
+                // changes empty textFields to 0
                 if (airfareField.getText().isEmpty()) {
                     airfareField.setText("0");
                 }
@@ -120,31 +157,51 @@ public class Lab4DavidHernandez extends Application {
                 if (conferenceField.getText().isEmpty()) {
                     conferenceField.setText("0");
                 }
-                double result = 0;
-                result += Double.parseDouble(airfareField.getText());
-                result += Double.parseDouble(carRentalField.getText());
-                if (Double.parseDouble(parkingField.getText()) > 
-                        (PARKING_ALLOWANCE * Double.parseDouble(daysField.getText()))) {
-                    result += (Double.parseDouble(parkingField.getText()) - PARKING_ALLOWANCE * Double.parseDouble(daysField.getText()));
+
+                // create variables to define what is contained in textFields
+                int days = Integer.parseInt(daysField.getText());
+                double airfare = Integer.parseInt(airfareField.getText());
+                double carRental= Integer.parseInt(carRentalField.getText());
+                double miles = Integer.parseInt(milesField.getText());
+                double parking = Integer.parseInt(parkingField.getText());
+                double taxi = Integer.parseInt(taxiField.getText());
+                double conference = Integer.parseInt(conferenceField.getText());
+                double lodging = Integer.parseInt(lodgingField.getText());
+
+                // calculate total expenses and allowable expenses
+                double expenses = airfare + carRental + parking + taxi + conference + lodging * days;
+                double allowable = MEAL_ALLOWANCE * days;
+                if (days * PARKING_ALLOWANCE > parking) {
+                    allowable += parking;
+                } else {
+                    allowable += days * PARKING_ALLOWANCE;
                 }
-                if (Double.parseDouble(taxiField.getText()) > 
-                        (TAXI_ALLOWANCE * Double.parseDouble(taxiField.getText()))) {
-                    result += (Double.parseDouble(taxiField.getText()) - TAXI_ALLOWANCE * Double.parseDouble(taxiField.getText()));
+                if (days * TAXI_ALLOWANCE > taxi) {
+                    allowable += taxi;
+                } else {
+                    allowable += days * TAXI_ALLOWANCE;
                 }
-                if (Double.parseDouble(lodgingField.getText()) > 
-                        (LODGING_ALLOWANCE * Double.parseDouble(lodgingField.getText()))) {
-                    result += (Double.parseDouble(lodgingField.getText()) - LODGING_ALLOWANCE * Double.parseDouble(lodgingField.getText()));
+                if (LODGING_ALLOWANCE > lodging) {
+                    allowable += days * lodging;
+                } else {
+                    allowable += days * LODGING_ALLOWANCE;
                 }
-                if (carRentalField.getText() == "0") {
-                    result -= Double.parseDouble(milesField.getText()) * MILEAGE_ALLOWANCE;
+                if (carRental != 0) {
+                    allowable += miles * MILEAGE_ALLOWANCE;
                 }
-                result += Double.parseDouble(conferenceField.getText());
-                result -= Double.parseDouble(conferenceField.getText()) * MEAL_ALLOWANCE;
-                
-                total.setText("total expenses: $" + Double.toString(result));
+
+                // change labels according to results of calculations
+                expensesLabel.setText("total expenses: $" + Double.toString(expenses));
+                allowableLabel.setText("total allowable expenses: $" + Double.toString(allowable));
+                if (expenses > allowable) {
+                    excessLabel.setText("Excess: $" + Double.toString(expenses - allowable));
+                } else {
+                    excessLabel.setText("Saved: $" + Double.toString(allowable - expenses));
+                }
             }
         };
-        
+
+        // call all three handlers
         daysField.setOnKeyReleased(disableCalculateHandler);
         airfareField.setOnKeyReleased(disableCalculateHandler);
         carRentalField.setOnKeyReleased(disableCalculateHandler);
@@ -153,12 +210,18 @@ public class Lab4DavidHernandez extends Application {
         taxiField.setOnKeyReleased(disableCalculateHandler);
         conferenceField.setOnKeyReleased(disableCalculateHandler);
         lodgingField.setOnKeyReleased(disableCalculateHandler);
+
+        carRentalField.setOnKeyReleased(disableTextField);
+        milesField.setOnKeyReleased(disableTextField);
+
         calculate.setOnMouseReleased(clickedCalculateHandler);
-        
+
+        // reveal stage
         BorderPane root = new BorderPane(gp);
         gp.setAlignment(Pos.CENTER);
         Scene scene = new Scene(root);
         scene.getStylesheets().add("styling.css");
+        stage.setTitle("Business Expense Calculator");
         stage.setScene(scene);
         stage.show();
     }
